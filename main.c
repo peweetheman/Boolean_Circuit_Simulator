@@ -7,61 +7,300 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Circuit.h"
+#include "math.h"
 
 /**
  * Two AND gates connected to make a 3-input AND circuit.
  */
-static Circuit* and3_Circuit() {
-	Boolean* x = new_Boolean(false);
-	Boolean* y = new_Boolean(false);
-	Boolean* z = new_Boolean(false);
-	Boolean** inputs = new_Boolean_array(3);
-	inputs[0] = x;
-	inputs[1] = y;
-	inputs[2] = z;
 
-	Boolean* out = new_Boolean(false);
-	Boolean** outputs = new_Boolean_array(1);
-	outputs[0] = out;
 
-	Gate* A1 = new_AndGate();
-	Gate* A2 = new_AndGate();
-	Gate** gates = new_Gate_array(2);
-	gates[0] = A1;
-	gates[1] = A2;
 
-	Circuit *circuit = new_Circuit(3, inputs, 1, outputs, 2, gates);
-	Circuit_connect(circuit, x, Gate_getInput(A1, 0));
-	Circuit_connect(circuit, y, Gate_getInput(A1, 1));
-	Circuit_connect(circuit, Gate_getOutput(A1), Gate_getInput(A2, 0));
-	Circuit_connect(circuit, z, Gate_getInput(A2, 1));
-	Circuit_connect(circuit, Gate_getOutput(A2), out);
-	return circuit;
-}
 
 static char* b2s(bool b) {
-	return b ? "T" : "F";
-}
-
-static void test3In1Out(Circuit* circuit, bool in0, bool in1, bool in2) {
-	Circuit_setInput(circuit, 0, in0);
-	Circuit_setInput(circuit, 1, in1);
-	Circuit_setInput(circuit, 2, in2);
-	Circuit_update(circuit);
-	bool out0 = Circuit_getOutput(circuit, 0);
-	printf("%s %s %s -> %s\n", b2s(in0), b2s(in1), b2s(in2), b2s(out0));
+    return b ? "T" : "F";
 }
 
 
-int main(int argc, char **argv) {
-	Circuit* circuit = and3_Circuit();
-	printf("The and3 circuit (AND of three inputs):\n");
-	Circuit_dump(circuit);
+static void test3input(Circuit* circuit, bool in0, bool in1, bool in2) {
+    Circuit_setInput(circuit, 0, in0);
+    Circuit_setInput(circuit, 1, in1);
+    Circuit_setInput(circuit, 2, in2);
+    Circuit_update(circuit);
+    bool out0 = Circuit_getOutput(circuit, 0);
+    printf("%s %s %s -> %s\n", b2s(in0), b2s(in1), b2s(in2), b2s(out0));
+}
+static void test2input(Circuit* circuit, bool in0, bool in1) {
+    Circuit_setInput(circuit, 0, in0);
+    Circuit_setInput(circuit, 1, in1);
+    Circuit_update(circuit);
+    bool out0 = Circuit_getOutput(circuit, 0);
+    printf("%s %s -> %s\n", b2s(in0), b2s(in1), b2s(out0));
+}
+static void testAdder(Circuit* circuit, bool in0, bool in1) {
+    Circuit_setInput(circuit, 0, in0);
+    Circuit_setInput(circuit, 1, in1);
+    Circuit_update(circuit);
+    bool out0 = Circuit_getOutput(circuit, 0);
+    bool out1 = Circuit_getOutput(circuit, 0);
+    printf("%s %s -> X: %s Carry: %s\n", b2s(in0), b2s(in1), b2s(out0), b2s(out1));
+}
+static bool* numToBool(int num, int inputs){
+    bool *set = (bool*) malloc(sizeof(bool)*3);
+    bool a;
+    bool b;
+    bool c;
+    if (inputs == 2){
+        if(num%2 ==0){
+            a = false;
+        }
+        else {
+            a = new_Boolean(true);
+        }
+        if(num > 2){
+            b = false;
+        }
+        else{
+            b = new_Boolean(true);
+        }
+        set[0] = a;
+        set[1] = b;
+    }
+    if(inputs == 3){
+        if(num%2 ==0){
+            a = false;
+        }
+        else {
+            a = new_Boolean(true);
+        }
+        if(num > 4){
+            b = false;
+        }
+        else{
+            b = new_Boolean(true);
+        }
+        if(num==2 || num == 3 || num == 6|| num ==7){
+            c = new_Boolean(true);
+        }
+        else{
+            c = false;
+        }
+        set[0] = a;
+        set[1] = b;
+        set[2] = c;
+    }
+    return set;
+}
+static void testCircuit(Circuit* circuit){
+    double inputs = Circuit_numInputs(circuit);
+    if(inputs==2){
+        for(int i =1; i<5; i++){
+            bool* set = numToBool(i, 2);
+            test2input(circuit, set[0], set[1]);
+            free(set);
+        }
+    }
+    if (inputs == 3){
+        for(int i =1; i<9; i++){
+            bool* set = numToBool(i, 3);
+            test3input(circuit, set[0], set[1], set[2]);
+            free(set);
+        }
+    }
+}
+static Circuit* first_circuit(){
+    Boolean* x = new_Boolean(false);
+    Boolean* y = new_Boolean(false);
+    Boolean* z = new_Boolean(false);
+    Boolean** inputs = new_Boolean_array(3);
+    inputs[0] = x;
+    inputs[1] = y;
+    inputs[2] = z;
+
+
+    Boolean* out = new_Boolean(false);
+    Boolean** outputs = new_Boolean_array(1);
+    outputs[0] = out;
+
+    Gate* A1 = new_AndGate();
+    Gate* A2 = new_AndGate();
+    Gate* N1 = new_Inverter();
+    Gate* O1 = new_OrGate();
+    Gate** gates = new_Gate_array(4);
+    gates[0] = N1;
+    gates[1] = A1;
+    gates[2] = A2;
+    gates[3] = O1;
+    Circuit *circuit = new_Circuit(3, inputs, 1, outputs, 4, gates);
+
+    Circuit_connect(circuit, y, Gate_getInput(N1, 0));
+    Circuit_connect(circuit, x, Gate_getInput(A1, 0));
+    Circuit_connect(circuit, z, Gate_getInput(A2, 0));
+    Circuit_connect(circuit, Gate_getOutput(N1), Gate_getInput(A1, 1));
+    Circuit_connect(circuit, y, Gate_getInput(A2, 1));
+    Circuit_connect(circuit, Gate_getOutput(A1), Gate_getInput(O1, 0));
+    Circuit_connect(circuit, Gate_getOutput(A2), Gate_getInput(O1, 1));
+    Circuit_connect(circuit, Gate_getOutput(O1), out);
+    return circuit;
+}
+
+static Circuit* second_circuit(){
+    Boolean* x = new_Boolean(false);
+    Boolean* y = new_Boolean(false);
+    Boolean* z = new_Boolean(false);
+    Boolean** inputs = new_Boolean_array(3);
+    inputs[0] = x;
+    inputs[1] = y;
+    inputs[2] = z;
+
+    Boolean* out = new_Boolean(false);
+    Boolean** outputs = new_Boolean_array(1);
+    outputs[0] = out;
+
+    Gate* A1 = new_AndGate();
+    Gate* A2 = new_AndGate();
+    Gate* N1 = new_Inverter();
+    Gate* N2 = new_Inverter();
+    Gate* N3 = new_Inverter();
+    Gate* N4 = new_Inverter();
+    Gate* O1 = new_OrGate();
+    Gate** gates = new_Gate_array(7);
+    gates[0] = N1;
+    gates[1] = A1;
+    gates[2] = A2;
+    gates[3] = O1;
+    gates[4] = N2;
+    gates[5] = N3;
+    gates[6] = N4;
+    Circuit *circuit = new_Circuit(3, inputs, 1, outputs, 7, gates);
+
+    Circuit_connect(circuit, y, Gate_getInput(N1, 0));
+    Circuit_connect(circuit, x, Gate_getInput(A1, 0));
+    Circuit_connect(circuit, z, Gate_getInput(A2, 0));
+    Circuit_connect(circuit, Gate_getOutput(N1), Gate_getInput(A1, 1));
+    Circuit_connect(circuit, y, Gate_getInput(A2, 1));
+    Circuit_connect(circuit, Gate_getOutput(A1), Gate_getInput(N2, 0));
+    Circuit_connect(circuit, Gate_getOutput(A2), Gate_getInput(N3, 0));
+    Circuit_connect(circuit, Gate_getOutput(N3), Gate_getInput(O1, 0));
+    Circuit_connect(circuit, Gate_getOutput(N2), Gate_getInput(O1, 1));
+    Circuit_connect(circuit, Gate_getOutput(O1), Gate_getInput(N4, 0));
+    Circuit_connect(circuit, Gate_getOutput(N4), out);
+    return circuit;
+}
+
+static Circuit* third_circuit(){
+    Boolean* x = new_Boolean(false);
+    Boolean* y = new_Boolean(false);
+    Boolean** inputs = new_Boolean_array(2);
+    inputs[0] = x;
+    inputs[1] = y;
+
+    Boolean* out = new_Boolean(false);
+    Boolean** outputs = new_Boolean_array(1);
+    outputs[0] = out;
+
+    Gate* A1 = new_AndGate();
+    Gate* A2 = new_AndGate();
+    Gate* N1 = new_Inverter();
+    Gate* N2 = new_Inverter();
+    Gate* N3 = new_Inverter();
+    Gate* N4 = new_Inverter();
+    Gate* O1 = new_OrGate();
+    Gate** gates = new_Gate_array(7);
+    gates[0] = N1;
+    gates[1] = A1;
+    gates[2] = A2;
+    gates[3] = O1;
+    gates[4] = N2;
+    gates[5] = N3;
+    gates[6] = N4;
+    Circuit *circuit = new_Circuit(2, inputs, 1, outputs, 7, gates);
+    Circuit_connect(circuit, x, Gate_getInput(N1, 0));
+    Circuit_connect(circuit, y, Gate_getInput(N2, 0));
+    Circuit_connect(circuit, x, Gate_getInput(A1, 0));
+    Circuit_connect(circuit, y, Gate_getInput(A1, 1));
+    Circuit_connect(circuit, Gate_getOutput(N1), Gate_getInput(A2, 0));
+    Circuit_connect(circuit, Gate_getOutput(N2), Gate_getInput(A2, 1));
+    Circuit_connect(circuit, Gate_getOutput(A2), Gate_getInput(O1, 0));
+    Circuit_connect(circuit, Gate_getOutput(A1), Gate_getInput(O1, 1));
+    Circuit_connect(circuit, Gate_getOutput(O1), out);
+    return circuit;
+}
+static Circuit* adder_circuit(){
+    Boolean* x = new_Boolean(false);
+    Boolean* y = new_Boolean(false);
+    Boolean** inputs = new_Boolean_array(2);
+    inputs[0] = x;
+    inputs[1] = y;
+
+    Boolean* out = new_Boolean(false);
+    Boolean** outputs = new_Boolean_array(1);
+    outputs[0] = out;
+
+    Gate* A1 = new_AndGate();
+    Gate* A2 = new_AndGate();
+    Gate* N1 = new_Inverter();
+    Gate* N2 = new_Inverter();
+    Gate* N3 = new_Inverter();
+    Gate* N4 = new_Inverter();
+    Gate* O1 = new_OrGate();
+    Gate** gates = new_Gate_array(7);
+    gates[0] = N1;
+    gates[1] = A1;
+    gates[2] = A2;
+    gates[3] = O1;
+    gates[4] = N2;
+    gates[5] = N3;
+    gates[6] = N4;
+    Circuit *circuit = new_Circuit(2, inputs, 1, outputs, 7, gates);
+    Circuit_connect(circuit, x, Gate_getInput(N1, 0));
+    Circuit_connect(circuit, y, Gate_getInput(N2, 0));
+    Circuit_connect(circuit, x, Gate_getInput(A1, 0));
+    Circuit_connect(circuit, y, Gate_getInput(A1, 1));
+    Circuit_connect(circuit, Gate_getOutput(N1), Gate_getInput(A2, 0));
+    Circuit_connect(circuit, Gate_getOutput(N2), Gate_getInput(A2, 1));
+    Circuit_connect(circuit, Gate_getOutput(A2), Gate_getInput(O1, 0));
+    Circuit_connect(circuit, Gate_getOutput(A1), Gate_getInput(O1, 1));
+    Circuit_connect(circuit, Gate_getOutput(O1), out);
+    return circuit;
+}
+
+int main() {
+	Circuit* circuitOne = first_circuit();
+	printf("The first circuit:\n");
+	Circuit_dump(circuitOne);
 	printf("\n");
-	printf("Testing: Some input(s) false: should be false\n");
-	test3In1Out(circuit, true, true, false);
-	printf("Testing: All inputs true: should be true\n");
-	test3In1Out(circuit, true, true, true);
-	printf("Note: Your program needs to test all possible combinations of input values,\nin order from all false to all true, using a single function.\n");
-	Circuit_free(circuit);
+	printf("Testing all inputs: \n");
+	testCircuit(circuitOne);
+	Circuit_free(circuitOne);
+
+    Circuit* circuitTwo = second_circuit();
+    printf("\n");
+    printf("The second circuit:\n");
+    Circuit_dump(circuitTwo);
+    printf("\n");
+    printf("Testing all inputs: \n");
+    testCircuit(circuitTwo);
+    Circuit_free(circuitTwo);
+    printf("\n");
+
+    Circuit* circuitThree = third_circuit();
+    printf("The third circuit:\n");
+    Circuit_dump(circuitThree);
+    printf("\n");
+    printf("Testing all inputs: \n");
+    testCircuit(circuitThree);
+    Circuit_free(circuitThree);
+    printf("\n");
+
+    Circuit* adder = adder_circuit();
+    printf("The third circuit:\n");
+    Circuit_dump(adder);
+    printf("\n");
+    printf("Testing all inputs: \n");
+    testCircuit(adder);
+    Circuit_free(adder);
+    return 1;
+
+
+
 }
