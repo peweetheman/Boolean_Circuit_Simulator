@@ -192,6 +192,30 @@ Gate* new_And3Gate() {
 	return this;
 }
 
+
+static void XORGate_update(Gate *this) {
+	Boolean_setValue(this->output, (!(Boolean_getValue(this->inputs[0]) && Boolean_getValue(this->inputs[1]))) && (!(!Boolean_getValue(this->inputs[0]) && !Boolean_getValue(this->inputs[1]))));
+}
+
+static void XORGate_print(Gate *this) {
+	printf("XOR(");
+	Boolean_print(this->inputs[0]);
+	printf(",");
+	Boolean_print(this->inputs[1]);
+	printf(",");
+	Boolean_print(this->output);
+}
+
+Gate* new_XORGate() {
+	Gate* this = new_Gate();
+	this->numInputs = 2;
+	this->inputs = new_Boolean_array(this->numInputs);
+	this->inputs[0] = new_Boolean(false);
+	this->inputs[1] = new_Boolean(false);
+	this->update = XORGate_update;
+	this->print = XORGate_print;
+	return this;
+}
 //
 // Or4Gate
 //
